@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 import requests, websockets
 from eth_account import Account
 
-CHAIN = os.environ.get("CRX_CHAIN", "base")
+CHAIN = os.environ.get("CRX_CHAIN", "avax-fuji")
 PAIR, SIDE, NOTIONAL = "USDJPY", "buy", "25000.00"
 EXPIRY = datetime.now(timezone.utc) + timedelta(days=7)
 while EXPIRY.weekday() >= 5:

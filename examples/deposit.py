@@ -3,7 +3,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
 from crx_maker import deposit
 
-CHAIN = "base"
+CHAIN = "avax-fuji"
 SYMBOL = "USDC"
 AMOUNT = "2500.50"
 

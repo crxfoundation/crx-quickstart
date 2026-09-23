@@ -10,7 +10,7 @@ from eth_utils import keccak
 BASE = os.environ.get("CRX_BASE", "https://api.sandbox.crxfx.com").rstrip("/")
 SIGNER = Account.from_key(os.environ["CRX_TAKER_SIGNER_PK"])
 CUSTODY = os.environ["CRX_TAKER_CUSTODY"].lower()
-CHAIN, PAIR, SIDE, NOTIONAL = "base", "USDJPY", "buy", "25000.00"
+CHAIN, PAIR, SIDE, NOTIONAL = "avax-fuji", "USDJPY", "buy", "25000.00"
 EXPIRY_MS = (int(time.time()) + 7 * 86400) * 1000
 
 LEG_TYPEHASH = keccak(text="Leg(address seat,bytes32 legId,bytes32 joinRef,bytes32 pair,"

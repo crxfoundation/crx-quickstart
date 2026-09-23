@@ -5,7 +5,7 @@ from eth_account import Account
 from eth_utils import keccak
 from crx_maker import CUSTODY, SIGNER, _leg, _nonce, leg_digest
 
-RFQ = {"rfq_id": "0x" + "ab" * 32, "chain": "base", "pair": "USDJPY",
+RFQ = {"rfq_id": "0x" + "ab" * 32, "chain": "avax-fuji", "pair": "USDJPY",
        "pair_id": "0x" + keccak(text="USD/JPY").hex(),
        "leg_id": "0x" + "51" * 32, "join_ref": "0x" + "c9" * 32,
        "side": -1, "notional": "1500000.00", "premium_bps": 15,
