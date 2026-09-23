@@ -45,17 +45,23 @@ def _ws(base):
     return base.replace("https://", "wss://").replace("http://", "ws://")
 
 
-def sign_rest(method, path, custody, signer_acct, nonce=None):
+def sign_rest(method, path, custody, signer_acct, nonce=None, raw=b""):
     ts = int(time.time() * 1000)
     nonce = nonce or uuid.uuid4().hex
     custody = custody.lower()
     signer = signer_acct.address.lower()
     msg = "\n".join(["CRX-REST-LOGIN", "Audience: crx-gateway", f"Method: {method.upper()}",
                      f"Path: {path}", f"Custody: {custody}", f"Signer: {signer}",
-                     f"Timestamp: {ts}", f"Nonce: {nonce}"])
+                     f"Timestamp: {ts}", f"Nonce: {nonce}", f"Body: 0x{keccak(raw).hex()}"])
     sig = Account.sign_message(encode_defunct(text=msg), signer_acct.key).signature.to_0x_hex()
     return {"x-crx-address": custody, "x-crx-signer": signer, "x-crx-ts": str(ts),
             "x-crx-nonce": nonce, "x-crx-sig": sig}
+
+
+def signed_post(url, path, payload, custody, signer_acct, timeout=10):
+    raw = json.dumps(payload, separators=(",", ":")).encode()
+    headers = {**HDR, **sign_rest("POST", path, custody, signer_acct, raw=raw)}
+    return _body(requests.post(url, headers=headers, timeout=timeout, data=raw))
 
 
 _health = _body(requests.get(f"{ROOT}/health", timeout=10))
@@ -136,11 +142,10 @@ def quote(rfq, *, rate, firm_for=60, client_quote_id=None):
     sig = Account.unsafe_sign_hash(digest, SIGNER.key).signature.to_0x_hex()
     assert Account._recover_hash(digest, signature=sig) == SIGNER.address
     path = f"/rfqs/{rfq['rfq_id']}/quotes"
-    headers = {**HDR, **sign_rest("POST", path, CUSTODY, SIGNER)}
-    body = _body(requests.post(f"{BASE}{path}", headers=headers, timeout=10,
-                               json={"maker": CUSTODY, "rate": rate,
-                                     "expires_at": (int(time.time()) + firm_for) * 1000,
-                                     "sig": sig, "client_quote_id": cqid}))
+    body = signed_post(f"{BASE}{path}", path,
+                       {"maker": CUSTODY, "rate": rate,
+                        "expires_at": (int(time.time()) + firm_for) * 1000,
+                        "sig": sig, "client_quote_id": cqid}, CUSTODY, SIGNER)
     assert body["leg_hash"] == "0x" + digest.hex(), "gateway rebuilt a different Leg"
     return body
 
@@ -204,8 +209,7 @@ def _submit_gateway_tx(w3, tx):
 
 def _gateway_flow(endpoint, payload):
     path = f"/{endpoint}"
-    headers = {**HDR, **sign_rest("POST", path, CUSTODY, SIGNER)}
-    body = _body(requests.post(f"{ROOT}{path}", headers=headers, timeout=10, json=payload))
+    body = signed_post(f"{ROOT}{path}", path, payload, CUSTODY, SIGNER)
     w3 = _w3()
     return [_submit_gateway_tx(w3, tx) for tx in body["transactions"]]
 
@@ -297,8 +301,7 @@ def arm_open_side_sealed(rfq, *, rate, enc_keys=None, include_witness=True,
     path = "/submit/open-side-sealed"
     url = f"{SUBMIT_BASE}{path}"
     _guard_witness_tls(url, body)
-    headers = {**HDR, **sign_rest("POST", path, CUSTODY, SIGNER)}
-    return _body(requests.post(url, headers=headers, timeout=15, json=body))
+    return signed_post(url, path, body, CUSTODY, SIGNER, timeout=15)
 
 
 def _key_signer(acct):
@@ -332,8 +335,7 @@ def arm_allocation_sealed(item, *, chain, signers, exiting_seat, remaining_seat,
     path = "/submit/allocation-sealed"
     url = f"{SUBMIT_BASE}{path}"
     _guard_witness_tls(url, body)
-    headers = {**HDR, **sign_rest("POST", path, CUSTODY, SIGNER)}
-    return _body(requests.post(url, headers=headers, timeout=15, json=body))
+    return signed_post(url, path, body, CUSTODY, SIGNER, timeout=15)
 
 
 def arm_closeout_sealed(item, *, chain, enc_keys=None, include_witness=True):
@@ -360,8 +362,7 @@ def arm_closeout_sealed(item, *, chain, enc_keys=None, include_witness=True):
     path = "/submit/liq-rfq-sealed"
     url = f"{SUBMIT_BASE}{path}"
     _guard_witness_tls(url, body)
-    headers = {**HDR, **sign_rest("POST", path, CUSTODY, SIGNER)}
-    return _body(requests.post(url, headers=headers, timeout=15, json=body))
+    return signed_post(url, path, body, CUSTODY, SIGNER, timeout=15)
 
 
 def deposit(chain, symbol, amount):

@@ -101,9 +101,9 @@ async def run():
                     digest = crx_maker.leg_digest(CHAIN, leg)
                     sig = Account.unsafe_sign_hash(digest, taker.key).signature.to_0x_hex()
                     apath = f"/rfqs/{rfq_id}/accept"
-                    aheaders = {**crx_maker.HDR, **crx_maker.sign_rest("POST", apath, taker_custody, taker)}
-                    body = crx_maker._body(requests.post(f"{BASE}{apath}", headers=aheaders, timeout=10,
-                                                         json={"quote_id": data["quote_id"], "leg": leg, "sig": sig}))
+                    body = crx_maker.signed_post(f"{BASE}{apath}", apath,
+                                                 {"quote_id": data["quote_id"], "leg": leg, "sig": sig},
+                                                 taker_custody, taker)
                     assert body["leg_hash"] == "0x" + digest.hex(), "gateway rebuilt a different Leg"
                     stage = "trade open"
                 if frame["type"] == "trade.opened":
@@ -114,10 +114,10 @@ async def run():
         async with websockets.connect(WS, ping_interval=20, ping_timeout=20) as taker_ws:
             await logon(taker_ws, taker, taker_custody)
             stage = "rfq open"
-            oheaders = {**crx_maker.HDR, **crx_maker.sign_rest("POST", "/rfqs", taker_custody, taker)}
-            ack = crx_maker._body(requests.post(f"{BASE}/rfqs", headers=oheaders, timeout=10, json={
+            ack = crx_maker.signed_post(f"{BASE}/rfqs", "/rfqs", {
                 "chain": CHAIN, "pair": PAIR, "side": SIDE, "expiry": EXPIRY_MS,
-                "notional": NOTIONAL, "client_rfq_id": f"verify-{uuid.uuid4().hex[:12]}"}))
+                "notional": NOTIONAL, "client_rfq_id": f"verify-{uuid.uuid4().hex[:12]}"},
+                taker_custody, taker)
             print("rfq", ack["rfq_id"])
             await asyncio.gather(maker_leg(maker_ws, ack["rfq_id"]),
                                  taker_leg(taker_ws, ack["rfq_id"], ack["leg_id"], ack["quote_expiry"]))

@@ -89,27 +89,32 @@ def leg_digest(leg):
 HDR = {"content-type": "application/json"}
 
 
-def sign_rest(method, path, custody, signer_acct, nonce=None):
+def sign_rest(method, path, custody, signer_acct, nonce=None, raw=b""):
     ts = int(time.time() * 1000)
     nonce = nonce or uuid.uuid4().hex
     custody = custody.lower()
     signer = signer_acct.address.lower()
     msg = "\n".join(["CRX-REST-LOGIN", "Audience: crx-gateway", f"Method: {method.upper()}",
                      f"Path: {path}", f"Custody: {custody}", f"Signer: {signer}",
-                     f"Timestamp: {ts}", f"Nonce: {nonce}"])
+                     f"Timestamp: {ts}", f"Nonce: {nonce}", f"Body: 0x{keccak(raw).hex()}"])
     sig = Account.sign_message(encode_defunct(text=msg), signer_acct.key).signature.to_0x_hex()
     return {"x-crx-address": custody, "x-crx-signer": signer, "x-crx-ts": str(ts),
             "x-crx-nonce": nonce, "x-crx-sig": sig}
+
+
+def signed_post(url, path, payload):
+    raw = json.dumps(payload, separators=(",", ":")).encode()
+    headers = {**HDR, **sign_rest("POST", path, CUSTODY, SIGNER, raw=raw)}
+    return _body(requests.post(url, headers=headers, timeout=10, data=raw))
 
 
 async def main():
     async with websockets.connect(_ws(BASE) + "/ws",
                                   ping_interval=20, ping_timeout=20) as ws:
         await ws_logon(ws)
-        oheaders = {**HDR, **sign_rest("POST", "/rfqs", CUSTODY, SIGNER)}
-        ack = _body(requests.post(f"{BASE}/rfqs", headers=oheaders, timeout=10, json={
+        ack = signed_post(f"{BASE}/rfqs", "/rfqs", {
             "chain": CHAIN, "pair": PAIR, "side": SIDE, "expiry": EXPIRY_MS,
-            "notional": NOTIONAL, "client_rfq_id": f"take-{uuid.uuid4().hex[:12]}"}))
+            "notional": NOTIONAL, "client_rfq_id": f"take-{uuid.uuid4().hex[:12]}"})
         rfq_id, my_leg_id, quote_expiry = ack["rfq_id"], ack["leg_id"], ack["quote_expiry"]
         print("rfq", rfq_id)
         accepted = False
@@ -123,9 +128,8 @@ async def main():
                 digest = leg_digest(leg)
                 sig = Account.unsafe_sign_hash(digest, SIGNER.key).signature.to_0x_hex()
                 apath = f"/rfqs/{rfq_id}/accept"
-                aheaders = {**HDR, **sign_rest("POST", apath, CUSTODY, SIGNER)}
-                body = _body(requests.post(f"{BASE}{apath}", headers=aheaders, timeout=10,
-                                           json={"quote_id": data["quote_id"], "leg": leg, "sig": sig}))
+                body = signed_post(f"{BASE}{apath}", apath,
+                                   {"quote_id": data["quote_id"], "leg": leg, "sig": sig})
                 assert body["leg_hash"] == "0x" + digest.hex(), "gateway rebuilt a different Leg"
                 accepted = True
                 print("accepted", data["quote_id"])
