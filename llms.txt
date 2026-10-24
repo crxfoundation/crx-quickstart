@@ -1,0 +1,13 @@
+# CRX API Quickstart
+
+> The CRX API Quickstart pages of Discover, in Markdown. Each page matches the live Discover page. SDK: https://github.com/crxfoundation/crx-python. Blocks tagged `crx-*` are Discover page elements.
+
+## Pages
+
+- [Taker API Quickstart](https://raw.githubusercontent.com/crxfoundation/crx-quickstart/main/taker-quickstart.md): Request quotes, trade and read your book on CRX.
+- [Maker API Quickstart](https://raw.githubusercontent.com/crxfoundation/crx-quickstart/main/maker-quickstart.md): Open a 100 USD maker test trade and read it back.
+
+## Scripts
+
+- [Taker script](https://raw.githubusercontent.com/crxfoundation/crx-quickstart/main/taker-script.py): the taker steps as one script.
+- [Maker script](https://raw.githubusercontent.com/crxfoundation/crx-quickstart/main/maker-script.py): the maker steps as one script, with more calls.
