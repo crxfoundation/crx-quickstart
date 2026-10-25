@@ -1,4 +1,5 @@
-<!-- CRX FIX 4.4 dictionary: QuickFIX/J 2.3.3 FIX44.xml plus the CRX fields 20001-20009, 20012 through 20017, TrdMatchID(880) and QuoteID on ExecutionReport, QuoteRejectReason on QuoteStatusReport, SecurityType FXNDF and QuoteCancelType 5. Quote requires Side, OrderQty, Currency, ValidUntilTime, CrxMaturityTime and CrxPremiumBps. -->
+<!-- CRX FIX 4.4 dictionary: QuickFIX/J 2.3.3 FIX44.xml plus MaturityTime(1079) in Instrument, UpfrontPriceType(1741) and UpfrontPrice(1742) on QuoteRequest, Quote and ExecutionReport, RawDataLength(95) and RawData(96) on QuoteRequest and Quote, CrxSignature(20007) on Quote and QuoteResponse, TrdMatchID(880) and QuoteID on ExecutionReport, CalculatedCcyLastQty(1056) on ExecutionReport, QuoteRejectReason on QuoteStatusReport, ApplicationSystemName(1603), ApplicationSystemVersion(1604) and ApplicationSystemVendor(1605) on Logon, SecurityType FXNDF and QuoteCancelType 5. Quote requires Side, OrderQty, Currency and ValidUntilTime. -->
+<!-- CRX dictionary version: RoE 2.0, issued 2026-10-25, git 787c49ba587d, body MD5 9bec514b4f21bf16cb854eef74c3065d -->
 <fix major="4" minor="4">
   <header>
     <field name="BeginString" required="Y"/>
@@ -57,9 +58,9 @@
       <field name="TestMessageIndicator" required="N"/>
       <field name="Username" required="N"/>
       <field name="Password" required="N"/>
-      <field name="CrxLoginKey" required="N"/>
-      <field name="CrxSignRefusal" required="N"/>
-      <field name="CrxLoginChain" required="N"/>
+      <field name="ApplicationSystemName" required="N"/>
+      <field name="ApplicationSystemVersion" required="N"/>
+      <field name="ApplicationSystemVendor" required="N"/>
     </message>
     <message name="TestRequest" msgtype="1" msgcat="admin">
       <field name="TestReqID" required="Y"/>
@@ -85,7 +86,6 @@
       <field name="Text" required="N"/>
       <field name="EncodedTextLen" required="N"/>
       <field name="EncodedText" required="N"/>
-      <field name="CrxErrorCode" required="N"/>
     </message>
     <message name="BusinessMessageReject" msgtype="j" msgcat="app">
       <field name="RefSeqNum" required="N"/>
@@ -95,7 +95,6 @@
       <field name="Text" required="N"/>
       <field name="EncodedTextLen" required="N"/>
       <field name="EncodedText" required="N"/>
-      <field name="CrxErrorCode" required="N"/>
     </message>
     <message name="UserRequest" msgtype="BE" msgcat="app">
       <field name="UserRequestID" required="Y"/>
@@ -289,16 +288,14 @@
         <field name="Price2" required="N"/>
         <component name="YieldData" required="N"/>
         <component name="Parties" required="N"/>
-        <field name="CrxMaturityTime" required="N"/>
-        <field name="CrxPremiumBps" required="N"/>
-        <field name="CrxTakerRef" required="N"/>
-        <field name="CrxQuoteExpiryMax" required="N"/>
-        <field name="CrxTestRequest" required="N"/>
-        <field name="CrxRequestExpiresAt" required="N"/>
+        <field name="UpfrontPriceType" required="N"/>
+        <field name="UpfrontPrice" required="N"/>
       </group>
       <field name="Text" required="N"/>
       <field name="EncodedTextLen" required="N"/>
       <field name="EncodedText" required="N"/>
+      <field name="RawDataLength" required="N"/>
+      <field name="RawData" required="N"/>
     </message>
     <message name="QuoteResponse" msgtype="AJ" msgcat="app">
       <field name="QuoteRespID" required="Y"/>
@@ -379,7 +376,6 @@
       <component name="SpreadOrBenchmarkCurveData" required="N"/>
       <component name="YieldData" required="N"/>
       <field name="CrxSignature" required="N"/>
-      <field name="CrxSignRefusal" required="N"/>
     </message>
     <message name="QuoteRequestReject" msgtype="AG" msgcat="app">
       <field name="QuoteReqID" required="Y"/>
@@ -436,7 +432,6 @@
       <field name="Text" required="N"/>
       <field name="EncodedTextLen" required="N"/>
       <field name="EncodedText" required="N"/>
-      <field name="CrxErrorCode" required="N"/>
     </message>
     <message name="RFQRequest" msgtype="AH" msgcat="app">
       <field name="RFQReqID" required="Y"/>
@@ -536,14 +531,11 @@
       <field name="Text" required="N"/>
       <field name="EncodedTextLen" required="N"/>
       <field name="EncodedText" required="N"/>
-      <field name="CrxMaturityTime" required="Y"/>
-      <field name="CrxPremiumBps" required="Y"/>
-      <field name="CrxLegId" required="N"/>
-      <field name="CrxSalt" required="N"/>
+      <field name="UpfrontPriceType" required="N"/>
+      <field name="UpfrontPrice" required="N"/>
+      <field name="RawDataLength" required="N"/>
+      <field name="RawData" required="N"/>
       <field name="CrxSignature" required="N"/>
-      <field name="CrxTypedData" required="N"/>
-      <field name="CrxSignRefusal" required="N"/>
-      <field name="CrxSpotTime" required="N"/>
     </message>
     <message name="QuoteCancel" msgtype="Z" msgcat="app">
       <field name="QuoteReqID" required="N"/>
@@ -661,7 +653,6 @@
       <field name="EncodedTextLen" required="N"/>
       <field name="EncodedText" required="N"/>
       <field name="QuoteRejectReason" required="N"/>
-      <field name="CrxErrorCode" required="N"/>
     </message>
     <message name="MassQuote" msgtype="i" msgcat="app">
       <field name="QuoteReqID" required="N"/>
@@ -1024,6 +1015,7 @@
       <component name="YieldData" required="N"/>
       <field name="RoundLot" required="N"/>
       <field name="MinTradeVol" required="N"/>
+      <field name="MinPriceIncrement" required="N"/>
       <field name="TradingSessionID" required="N"/>
       <field name="TradingSessionSubID" required="N"/>
       <field name="ExpirationCycle" required="N"/>
@@ -1401,10 +1393,9 @@
     </group>
     <field name="QuoteID" required="N"/>
     <field name="TrdMatchID" required="N"/>
-    <field name="CrxMaturityTime" required="N"/>
-    <field name="CrxPremiumBps" required="N"/>
-    <field name="CrxErrorCode" required="N"/>
-    <field name="CrxSpotTime" required="N"/>
+    <field name="UpfrontPriceType" required="N"/>
+    <field name="UpfrontPrice" required="N"/>
+    <field name="CalculatedCcyLastQty" required="N"/>
   </message>
   <message name="DontKnowTrade" msgtype="Q" msgcat="app">
     <field name="OrderID" required="Y"/>
@@ -3707,6 +3698,7 @@
       <field name="SecuritySubType" required="N"/>
       <field name="MaturityMonthYear" required="N"/>
       <field name="MaturityDate" required="N"/>
+      <field name="MaturityTime" required="N"/>
       <field name="PutOrCall" required="N" />
       <field name="CouponPaymentDate" required="N"/>
       <field name="IssueDate" required="N"/>
@@ -6846,23 +6838,16 @@
     <field number="954" name="Nested3PartySubIDType" type="INT"/>
     <field number="955" name="LegContractSettlMonth" type="MONTHYEAR"/>
     <field number="956" name="LegInterestAccrualDate" type="LOCALMKTDATE"/>
-    <field number="20001" name="CrxMaturityTime" type="UTCTIMESTAMP"/>
-    <field number="20002" name="CrxPremiumBps" type="INT"/>
-    <field number="20003" name="CrxTakerRef" type="STRING"/>
-    <field number="20004" name="CrxQuoteExpiryMax" type="UTCTIMESTAMP"/>
-    <field number="20005" name="CrxLegId" type="STRING"/>
-    <field number="20006" name="CrxSalt" type="STRING"/>
-    <field number="20007" name="CrxSignature" type="STRING"/>
-    <field number="20008" name="CrxTypedData" type="STRING"/>
-    <field number="20009" name="CrxErrorCode" type="STRING"/>
-    <field number="20012" name="CrxLoginKey" type="STRING"/>
-    <field number="20013" name="CrxSignRefusal" type="STRING"/>
-    <field number="20014" name="CrxTestRequest" type="BOOLEAN">
-      <value enum="Y" description="YES"/>
-      <value enum="N" description="NO"/>
+    <field number="969" name="MinPriceIncrement" type="FLOAT"/>
+    <field number="1056" name="CalculatedCcyLastQty" type="QTY"/>
+    <field number="1079" name="MaturityTime" type="TZTIMEONLY"/>
+    <field number="1603" name="ApplicationSystemName" type="STRING"/>
+    <field number="1604" name="ApplicationSystemVersion" type="STRING"/>
+    <field number="1605" name="ApplicationSystemVendor" type="STRING"/>
+    <field number="1741" name="UpfrontPriceType" type="INT">
+      <value enum="1" description="PERCENTAGE"/>
     </field>
-    <field number="20015" name="CrxRequestExpiresAt" type="UTCTIMESTAMP"/>
-    <field number="20016" name="CrxSpotTime" type="UTCTIMESTAMP"/>
-    <field number="20017" name="CrxLoginChain" type="STRING"/>
+    <field number="1742" name="UpfrontPrice" type="PRICE"/>
+    <field number="20007" name="CrxSignature" type="STRING"/>
   </fields>
 </fix>
