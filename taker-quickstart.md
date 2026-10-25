@@ -14,7 +14,7 @@ getting-started
 ```crx-copy-script
 ```
 
-Full script to deposit, open and accept position, and withdraw remaining free collateral
+To complete your first trade easily in a few minutes, install the SDK, replace /path/to/wallet.key with the path to your key file, and copy and paste the full Quickstart script. The script will deposit 100 USDC to the CRX Margin account, request a quote, accept it, and withdraw remaining collateral. For step-by-step instructions, see below.
 
 ## Set up
 

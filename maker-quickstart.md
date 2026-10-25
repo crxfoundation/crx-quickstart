@@ -37,7 +37,7 @@ def quote_live(price):
     return maker.quote_live(price, seconds=3600)
 ```
 
-Full script to deposit, open and accept position, and withdraw remaining free collateral
+To complete your first trade easily in a few minutes, install the SDK, replace /path/to/wallet.key with the path to your key file, and copy and paste the full Quickstart script. The script will deposit 100 USDC to the CRX Margin account, trigger CRX to send out a trade request, respond with a quote from your address, and withdraw remaining collateral. For step-by-step instructions, see below.
 
 ## Set up
 
