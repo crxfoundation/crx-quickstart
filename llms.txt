@@ -6,7 +6,7 @@
 
 - [Taker API Quickstart](https://raw.githubusercontent.com/crxfoundation/crx-quickstart/main/taker-quickstart.md): Request quotes, trade and read your book on CRX.
 - [Maker API Quickstart](https://raw.githubusercontent.com/crxfoundation/crx-quickstart/main/maker-quickstart.md): Open a 100 USD maker test trade and read it back.
-- [FIX Quickstart](https://raw.githubusercontent.com/crxfoundation/crx-quickstart/main/fix/quickstart.md): Connect a FIX 4.4 engine to CRX and make a first trade in 8 steps. The [Rules of Engagement](https://raw.githubusercontent.com/crxfoundation/crx-quickstart/main/fix/rules-of-engagement.md), the dictionary [FIX44-CRX.xml](https://raw.githubusercontent.com/crxfoundation/crx-quickstart/main/fix/FIX44-CRX.xml) and the sample messages in fix/examples/ are beside it.
+- [FIX Quickstart](https://raw.githubusercontent.com/crxfoundation/crx-quickstart/main/fix/quickstart.md): Connect a FIX 4.4 engine to CRX, make a first trade as a taker and send a first quote as a maker. The [Rules of Engagement](https://raw.githubusercontent.com/crxfoundation/crx-quickstart/main/fix/rules-of-engagement.md), the dictionary [FIX44-CRX.xml](https://raw.githubusercontent.com/crxfoundation/crx-quickstart/main/fix/FIX44-CRX.xml) and the sample messages in fix/examples/ are beside it.
 
 ## Scripts
 

@@ -1,10 +1,8 @@
 # FIX Quickstart
 
-Connect a FIX 4.4 engine to CRX and make a first trade in 8 steps. Each step gives a setting or message, then the result or the CRX answer. The [Rules of Engagement](rules-of-engagement.md), version 2.0, give the full rules.
+Connect a FIX 4.4 engine to CRX, make a first trade as a taker and send a first quote as a maker. Steps 1 to 6 lead to the first trade. Step 7 gives the first maker quote. Step 8 lists common rejects. Each step gives a setting or message, then the result or the CRX answer. The [Rules of Engagement](rules-of-engagement.md) give the full rules.
 
-The FIX engine sends and receives standard FIX fields only. The signature proxy adds the one CRX tag, CrxSignature (20007), on the way to CRX.
-
-The samples come from a CRX test run of version 2.0 with QuickFIX/J 2.3.3. The times in [`12-logout-daily.fix`](examples/12-logout-daily.fix) come from a test of the daily reset; the sample shows the format that CRX sends. `|` stands for SOH (0x01). The sample keys are test keys with no funds.
+The FIX engine sends and receives standard FIX fields only. Each step shows the messages as the FIX engine sends and receives them. The fields that the signature proxy adds and removes are in [Messages between the signature proxy and CRX](#messages-between-the-signature-proxy-and-crx).
 
 ## 1. Requirements
 
@@ -18,9 +16,9 @@ Get these items before the first Logon.
 | SenderCompID (49) | Provided at onboarding |
 | CRX host and port | Provided at onboarding |
 | CRX contract address | Provided at onboarding |
-| Signature proxy | The program `crx-signature-proxy` for version 2.0. Provided at onboarding. |
+| Signature proxy | The program `crx-signature-proxy`. Provided at onboarding. |
 | FIX engine | A FIX 4.4 initiator, for example QuickFIX/J |
-| Host clock | On NTP. SendingTime (52) must be within 120 seconds of CRX time. On the Logon, 52 must be at most 5 seconds ahead. |
+| Host clock | On NTP. SendingTime (52) must be within 120 s of CRX time. On the Logon, 52 must be at most 5 s ahead. |
 
 Send CRX the seat address and, for an allowlist, the source IP addresses.
 
@@ -28,7 +26,7 @@ Result: CRX approves the seat and sends the SenderCompID for each role, the host
 
 ## 2. Dictionary
 
-Download the CRX data dictionary [`FIX44-CRX.xml`](FIX44-CRX.xml) and load it in the FIX engine. CRX also publishes a dated copy with the same bytes, [`FIX44-CRX-2026-10-25.xml`](FIX44-CRX-2026-10-25.xml). Line 2 of the file reads `CRX dictionary version: RoE 2.0, issued 2026-10-25`, then the git commit and the body MD5.
+Download the CRX data dictionary [`FIX44-CRX.xml`](FIX44-CRX.xml) and load it in the FIX engine. Line 2 of the file gives the version and the issue date of the Rules of Engagement, then the git commit and the body MD5. CRX also publishes a dated copy with the same bytes, `FIX44-CRX-<issue date>.xml`.
 
 ```ini
 UseDataDictionary=Y
@@ -49,16 +47,16 @@ Put the seat key, 64 hex characters with or without `0x`, in a file with mode 06
 
 ```toml
 listen = "127.0.0.1:19877"
-upstream = "<host>:<port>"  # Provided at onboarding
+upstream = "<Provided at onboarding>"
 upstream_tls = true
-custody = "0x<seat address>"
+custody = "<seat address>"
 state_file = "/var/lib/crx/proxy.state"
 
 [domain]
 name = "CRX"
 version = "rulebook-1.0"
 chain_id = 1
-verifying_contract = "0x<CRX contract address>"  # Provided at onboarding
+verifying_contract = "<Provided at onboarding>"
 
 [backend]
 kind = "local"
@@ -66,10 +64,11 @@ key_file = "/etc/crx/seat.key"
 ```
 
 - `listen`: the address for the FIX engine; a loopback address unless `allow_remote_listen = true`.
+- `upstream`: the CRX host and port, as `host:port`.
 - `upstream_tls = true`: TLS 1.2 or TLS 1.3. CRX rejects a plain TCP connection.
-- `custody`: the seat address.
-- `state_file`: a new file. It keeps the signed IDs over a restart. The signature proxy refuses a state file from version 1.x. Change to a new state file only at the daily reset, with no live RFQ.
-- `[domain]`: the domain of the EIP-712 signatures. `chain_id = 1` also goes in the `Chain` line of the Logon signature. See [5.2 Tags the signature proxy adds and removes](rules-of-engagement.md#52-tags-the-signature-proxy-adds-and-removes).
+- `custody`: the seat address, `0x` and 40 hex characters.
+- `state_file`: a new file. It keeps the signed IDs over a restart. The signature proxy refuses a state file of an earlier major version. Change to a new state file only at the daily reset, with no live RFQ.
+- `[domain]`: the domain of the EIP-712 signatures. `verifying_contract` is the CRX contract address. `chain_id = 1` also goes in the `Chain` line of the Logon signature. See [5.2 Tags the signature proxy adds and removes](rules-of-engagement.md#52-tags-the-signature-proxy-adds-and-removes).
 
 ### 3.2 Path B: Fireblocks or Fordefi
 
@@ -99,7 +98,7 @@ chain = "evm_1"
 
 - Set a custodian policy that signs with no approval by a person, only for EIP-712 messages with domain name `CRX`, chainId 1, the CRX contract address and primaryType `Quote` or `Trade`, and EIP-191 messages that start with `CRX-REST-LOGIN`.
 - Fireblocks: set the callback handler URL of the API user to the signature proxy, path `/v2/tx_sign_request`, with public key authentication (RSA 2048). The callback needs HTTPS: set `tls_cert_file` and `tls_key_file` in `[backend.callback]`, or put a TLS server in front of the loopback address. Use one API user for each signature proxy, and for nothing else.
-- A custodian back end serves takers, and makers only when the 99th percentile time from TransactTime (60) of the R to the S sent is below 4.5 seconds.
+- A custodian back end serves takers, and makers only when the 99th percentile time from TransactTime (60) of the R to the S sent is below 4.5 s.
 - See [5.5 Key back ends](rules-of-engagement.md#55-key-back-ends).
 
 ### 3.3 Start
@@ -137,47 +136,59 @@ ValidateUserDefinedFields=N
 
 - TargetCompID (56): `CRX-TRD` for trading, `CRX-DC` for drop copy.
 - ReconnectInterval: `5;10;20;40;60` is the QuickFIX/J form. QuickFIX C++, QuickFIX/n and QuickFIX/Go take one value, `5`.
-- With a custodian back end, set `LogonTimeout` to 30 seconds or more, and HeartBtInt (108) to 30 or more.
+- With a custodian back end, set `LogonTimeout` to 30 s or more, and HeartBtInt (108) to 30 or more.
 
-Answer: at 17:00:00 New York time each day, CRX ends the session with Logout code `DAILY_RESET` ([`12-logout-daily.fix`](examples/12-logout-daily.fix)). From 17:00:30, log on with MsgSeqNum (34) = 1 and ResetSeqNumFlag (141) = Y. The settings of step 4 send no 141: in QuickFIX/J, set 141 = Y in `toAdmin` on a Logon with MsgSeqNum (34) = 1. Without it, the signature proxy refuses the QuoteRequest (R) and Quote (S) messages of the new day until it restarts. See [4.8 Schedule](rules-of-engagement.md#48-schedule) and [3.4 Engine settings](rules-of-engagement.md#34-engine-settings).
+Answer: at 17:00:00 New York time each day, CRX ends the session with Logout code `DAILY_RESET`. From 17:00:30, log on with MsgSeqNum (34) = 1 and ResetSeqNumFlag (141) = Y. The settings of step 4 send no 141: in QuickFIX/J, set 141 = Y in `toAdmin` on a Logon with MsgSeqNum (34) = 1. Without it, the signature proxy refuses each QuoteRequest (R) and Quote (S) from CRX whose MsgSeqNum (34) is at or below the highest number it passed before the reset. See [4.8 Schedule](rules-of-engagement.md#48-schedule) and [3.4 Engine settings](rules-of-engagement.md#34-engine-settings).
+
+The samples on this page come from a CRX test run with QuickFIX/J 2.3.3. `|` stands for SOH (0x01).
+
+Logout at the daily reset ([`12-logout-daily.fix`](examples/12-logout-daily.fix)):
 
 ```text
-8=FIX.4.4|9=158|35=5|49=CRX-TRD|56=MKR1|34=2|52=20261025-17:45:11.013|58=DAILY_RESET: The session ends for the daily reset. Log on from 17:45:41 UTC. (trace 1a1742a98620000)|10=014|
+8=FIX.4.4|9=158|35=5|49=CRX-TRD|56=MKR1|34=2|52=20261026-09:48:14.116|58=DAILY_RESET: The session ends for the daily reset. Log on from 09:48:44 UTC. (trace 1a1779c4b930000)|10=086|
 ```
+
+The test kit moved the daily reset into the run: the sample shows run times, not 17:00:00 New York time.
 
 ## 5. Logon
 
-Start the FIX engine. It sends Logon (A) to the signature proxy ([`01-logon-from-engine.fix`](examples/01-logon-from-engine.fix)). Set ApplicationSystemName (1603) to the name and version of the FIX engine, and ApplicationSystemVendor (1605) to its vendor. CRX reads the FIX engine version for certification from 1603. The sample has no 1603 and no 1605; CRX accepts the Logon without them.
+Start the FIX engine. It sends Logon (A) to the signature proxy. Set ApplicationSystemName (1603) to the name and version of the FIX engine, and ApplicationSystemVendor (1605) to its vendor. CRX reads the FIX engine version for certification from 1603.
+
+First Logon of the day, from the FIX engine ([`01-logon-from-engine.fix`](examples/01-logon-from-engine.fix)):
 
 ```text
-8=FIX.4.4|9=72|35=A|34=1|49=TKR1|52=20261025-17:30:46.985|56=CRX-TRD|98=0|108=30|141=Y|10=095|
+8=FIX.4.4|9=113|35=A|34=1|49=TKR1|52=20261026-09:33:15.393|56=CRX-TRD|98=0|108=30|141=Y|1603=QuickFIX/J 2.3.3|1605=quickfixj.org|10=076|
 ```
 
-Samples 01 to 03 carry ResetSeqNumFlag (141) = Y, as on the first Logon after the daily reset. At other times, send 141 = N or no 141. The CRX answer then has no 141.
+The first Logon of the day carries ResetSeqNumFlag (141) = Y, as step 4 gives. At other times, send 141 = N or no 141. The CRX answer then has no 141.
 
-The signature proxy sets Username (553) to the seat address. It adds RawDataLength (95) = 88 and RawData (96) = the Logon signature in base64, and sets ApplicationSystemVersion (1604) to its own version. Then it sends the Logon to CRX ([`02-logon-to-crx.fix`](examples/02-logon-to-crx.fix)). The Logon signature covers the `chain_id` of step 3, `1`. See [4.1.1 Logon signature](rules-of-engagement.md#411-logon-signature).
+The signature proxy adds the seat address and the Logon signature on the way to CRX. See [Messages between the signature proxy and CRX](#messages-between-the-signature-proxy-and-crx).
+
+Answer: CRX sends Logon (A) with MaxMessageSize (383) = 8192. Send application messages only after this answer. Keep each message at most 8,192 bytes.
+
+Answer to the first Logon of the day ([`03-logon-answer.fix`](examples/03-logon-answer.fix)):
 
 ```text
-8=FIX.4.4|9=248|35=A|34=1|49=TKR1|52=20261025-17:30:46.985|56=CRX-TRD|98=0|108=30|141=Y|553=0xedf21751cb0cd9525bafcbc269b49dab7323acdd|95=88|96=v0GnLWmFUf63doVj6dPnsKgxJsiOmA6E+RKR85DGO7Y8FuDl1PRWdNHUyIhP4REdQLlFz308L7woDNJA5HbHYhs=|1604=crx-signature-proxy/0.1.0|10=246|
+8=FIX.4.4|9=81|35=A|49=CRX-TRD|56=TKR1|34=1|52=20261026-09:33:15.503|98=0|108=30|141=Y|383=8192|10=002|
 ```
 
-Answer: CRX sends Logon (A) with MaxMessageSize (383) = 8192 ([`03-logon-answer.fix`](examples/03-logon-answer.fix)). Send application messages only after this answer. Keep each message at most 8,192 bytes.
+A rejected Logon gets Logout (5). Text (58) starts with the code. See [9.6 Logout codes](rules-of-engagement.md#96-logout-codes).
+
+Logon reject ([`04-logon-rejected.fix`](examples/04-logon-rejected.fix)):
 
 ```text
-8=FIX.4.4|9=81|35=A|49=CRX-TRD|56=TKR1|34=1|52=20261025-17:30:47.026|98=0|108=30|141=Y|383=8192|10=002|
-```
-
-A rejected Logon gets Logout (5). Text (58) starts with the code ([`04-logon-rejected.fix`](examples/04-logon-rejected.fix)). See [9.6 Logout codes](rules-of-engagement.md#96-logout-codes).
-
-```text
-8=FIX.4.4|9=130|35=5|49=CRX-TRD|56=TKR1|34=1|52=20261025-17:44:03.363|58=LOGON_BEGIN_STRING: BeginString must be FIX.4.4. (trace 1a17429901b0023)|10=201|
+8=FIX.4.4|9=130|35=5|49=CRX-TRD|56=TKR1|34=1|52=20261026-09:47:00.015|58=LOGON_BEGIN_STRING: BeginString must be FIX.4.4. (trace 1a1779b2a2c0023)|10=036|
 ```
 
 ## 6. Taker: first trade
 
+The samples of steps 6 and 7 show one trade: a USD/MXN NDF of 1,000,000 USD, the taker buys USD. Settlement is on the fixing date, one month after the trade date and moved to the next business day, at 18:00:00 UTC: SettlDate (64) = MaturityDate (541). See [10.3 Settlement time](rules-of-engagement.md#103-settlement-time). The FIX engine sets the IDs `ORD-…` in ClOrdID (11), `RFQ-…` in QuoteReqID (131), `QR-…` in QuoteRespID (693) and `Q-…` in the maker QuoteID (117). The IDs that CRX sets are UUIDs.
+
+The signature proxy removes the signature data from the Quote (S) and signs the QuoteResponse (AJ). See [Messages between the signature proxy and CRX](#messages-between-the-signature-proxy-and-crx).
+
 ### 6.1 Request
 
-Send QuoteRequest (R) ([`20-quote-request.fix`](examples/20-quote-request.fix)). Set a new QuoteReqID (131), unique for the seat. In the NoRelatedSym (146) group:
+Send QuoteRequest (R). Set a new QuoteReqID (131), unique for the seat. In the NoRelatedSym (146) group:
 
 - Set SecurityType (167) = `FXNDF`.
 - Set the settlement time in MaturityDate (541) and MaturityTime (1079), UTC, 1 hour to 90 days ahead. 1079 has the form `HH:MM:SSZ`, with no decimals in the seconds. 1079 directly follows 541.
@@ -186,100 +197,114 @@ Send QuoteRequest (R) ([`20-quote-request.fix`](examples/20-quote-request.fix)).
 
 See [7.6 QuoteRequest (R), taker to CRX](rules-of-engagement.md#76-quoterequest-r-taker-to-crx).
 
+QuoteRequest from the FIX engine ([`20-quote-request.fix`](examples/20-quote-request.fix)):
+
 ```text
-8=FIX.4.4|9=199|35=R|34=3|49=TKR1|52=20261025-17:30:47.036|56=CRX-TRD|131=TKR1-R-1792949447036-2|146=1|55=USD/MXN|167=FXNDF|541=20261025|1079=19:30:00Z|537=1|54=1|38=1000|64=20261025|15=USD|60=20261025-17:30:47.036|10=127|
+8=FIX.4.4|9=190|35=R|34=3|49=TKR1|52=20261026-09:33:15.511|56=CRX-TRD|131=RFQ-000201|146=1|55=USD/MXN|167=FXNDF|541=20261127|1079=18:00:00Z|537=1|54=1|38=1000000|64=20261127|15=USD|60=20261026-09:33:15.510|10=094|
 ```
 
-Answer: QuoteStatusReport (AI) 297 = 10 (Pending), immediately ([`21-quote-status-pending.fix`](examples/21-quote-status-pending.fix)).
+Answer: QuoteStatusReport (AI) 297 = 10 (Pending), immediately. At Pending, QuoteID (117) repeats QuoteReqID (131).
+
+Pending ([`21-quote-status-pending.fix`](examples/21-quote-status-pending.fix)):
 
 ```text
-8=FIX.4.4|9=152|35=AI|49=CRX-TRD|56=TKR1|34=2|52=20261025-17:30:47.041|131=TKR1-R-1792949447036-2|117=TKR1-R-1792949447036-2|55=USD/MXN|60=20261025-17:30:47.037|297=10|10=180|
+8=FIX.4.4|9=128|35=AI|49=CRX-TRD|56=TKR1|34=2|52=20261026-09:33:15.634|131=RFQ-000201|117=RFQ-000201|55=USD/MXN|60=20261026-09:33:15.520|297=10|10=114|
 ```
 
-Then CRX sends the best Quote (S), 5 to 20 seconds after the R ([`22-quote-to-taker.fix`](examples/22-quote-to-taker.fix)). The signature proxy reads and removes RawDataLength (95) and RawData (96). The FIX engine receives the S without them ([`22a-quote-to-engine.fix`](examples/22a-quote-to-engine.fix)). QuoteID (117) is a UUID. The rate is in OfferPx (133) when the taker buys and in BidPx (132) when the taker sells. With no quote, CRX sends QuoteRequestReject (AG) 658 = 8, code `NO_QUOTE`.
+Then CRX sends the best Quote (S), 5 to 20 s after the R. The rate is in OfferPx (133) when the taker buys and in BidPx (132) when the taker sells. With no quote, CRX sends QuoteRequestReject (AG) 658 = 8, code `NO_QUOTE`.
+
+Quote to the FIX engine ([`22a-quote-to-engine.fix`](examples/22a-quote-to-engine.fix)):
 
 ```text
-8=FIX.4.4|9=268|35=S|49=CRX-TRD|56=TKR1|34=4|52=20261025-17:30:52.311|131=TKR1-R-1792949447036-2|117=561527dd-df4b-8967-b6ac-6e9160d6b7bb|537=1|55=USD/MXN|167=FXNDF|541=20261025|1079=19:30:00Z|54=1|38=1000|64=20261025|15=USD|133=18.5|62=20261025-17:32:47.042|60=20261025-17:30:52.308|10=105|
+8=FIX.4.4|9=262|35=S|49=CRX-TRD|56=TKR1|34=4|52=20261026-09:33:21.054|131=RFQ-000201|117=959bbc1a-7496-82e8-af14-38c826bae7c3|537=1|55=USD/MXN|167=FXNDF|541=20261127|1079=18:00:00Z|54=1|38=1000000|64=20261127|15=USD|133=18.4753|62=20261026-09:35:15.781|60=20261026-09:33:21.048|10=209|
 ```
 
 ### 6.2 Accept
 
-Before ValidUntilTime (62) of the S, send QuoteResponse (AJ) with 694 = 1 ([`24-quote-response-from-engine.fix`](examples/24-quote-response-from-engine.fix)). Copy QuoteID (117), Symbol (55), Side (54) and OrderQty (38) from the S. Set SecurityType (167) = `FXNDF` and Price (44) = the quoted rate. Set a new QuoteRespID (693) and a new ClOrdID (11). MaturityDate (541), MaturityTime (1079) and SettlDate (64) are optional; when sent, they must equal the S.
+Before ValidUntilTime (62) of the S, send QuoteResponse (AJ) with 694 = 1. Copy QuoteID (117), Symbol (55), Side (54) and OrderQty (38) from the S. Set SecurityType (167) = `FXNDF` and Price (44) = the quoted rate. Set a new QuoteRespID (693) and a new ClOrdID (11). MaturityDate (541), MaturityTime (1079) and SettlDate (64) are optional; when sent, they must equal the S.
+
+QuoteResponse from the FIX engine ([`24-quote-response-from-engine.fix`](examples/24-quote-response-from-engine.fix)):
 
 ```text
-8=FIX.4.4|9=248|35=AJ|34=4|49=TKR1|52=20261025-17:30:52.320|56=CRX-TRD|11=TKR1-O-1792949452320-4|38=1000|44=18.5|54=1|55=USD/MXN|60=20261025-17:30:52.320|64=20261025|117=561527dd-df4b-8967-b6ac-6e9160d6b7bb|167=FXNDF|541=20261025|693=TKR1-QR-1792949452320-3|694=1|10=203|
+8=FIX.4.4|9=243|35=AJ|34=4|49=TKR1|52=20261026-09:33:21.065|56=CRX-TRD|11=ORD-000201|38=1000000|44=18.4753|54=1|55=USD/MXN|60=20261026-09:33:21.065|64=20261127|117=959bbc1a-7496-82e8-af14-38c826bae7c3|167=FXNDF|541=20261127|693=QR-000201|694=1|1079=18:00:00Z|10=011|
 ```
 
-The signature proxy adds CrxSignature (20007), the `Trade` signature in base64 ([`25-quote-response-to-crx.fix`](examples/25-quote-response-to-crx.fix)). See [5.4 Taker accept signature](rules-of-engagement.md#54-taker-accept-signature).
+Answer: ExecutionReport (8) 150 = A (Pending New) within 100 ms, then 150 = 0 (New) when CRX takes the accept.
 
-Answer: ExecutionReport (8) 150 = A (Pending New) within 100 milliseconds ([`26-exec-pending-new.fix`](examples/26-exec-pending-new.fix)), then 150 = 0 (New) when CRX takes the accept ([`27-exec-new.fix`](examples/27-exec-new.fix)). OrderID (37) and ExecID (17) are UUIDs.
+Pending New and New ([`26-exec-pending-new.fix`](examples/26-exec-pending-new.fix), [`27-exec-new.fix`](examples/27-exec-new.fix)):
 
 ```text
-8=FIX.4.4|9=372|35=8|49=CRX-TRD|56=TKR1|34=5|52=20261025-17:30:52.326|37=fe0f0ab6-7a24-8f5d-b560-67de12f00deb|11=TKR1-O-1792949452320-4|693=TKR1-QR-1792949452320-3|17=7b863094-9926-8c9a-bea1-a70bb70a25fd|150=A|39=A|64=20261025|55=USD/MXN|167=FXNDF|541=20261025|1079=19:30:00Z|54=1|38=1000|15=USD|151=1000|14=0|6=0|60=20261025-17:30:52.323|120=USD|117=561527dd-df4b-8967-b6ac-6e9160d6b7bb|10=032|
-8=FIX.4.4|9=372|35=8|49=CRX-TRD|56=TKR1|34=6|52=20261025-17:30:52.363|37=fe0f0ab6-7a24-8f5d-b560-67de12f00deb|11=TKR1-O-1792949452320-4|693=TKR1-QR-1792949452320-3|17=0ab5b529-2079-85f4-a768-3df2ceffe381|150=0|39=0|64=20261025|55=USD/MXN|167=FXNDF|541=20261025|1079=19:30:00Z|54=1|38=1000|15=USD|151=1000|14=0|6=0|60=20261025-17:30:52.360|120=USD|117=561527dd-df4b-8967-b6ac-6e9160d6b7bb|10=010|
+8=FIX.4.4|9=352|35=8|49=CRX-TRD|56=TKR1|34=5|52=20261026-09:33:21.078|37=63a7bccb-65ac-82d6-9262-ab701a9894be|11=ORD-000201|693=QR-000201|17=84ba6d7a-c139-8227-a8de-55fc822163ad|150=A|39=A|64=20261127|55=USD/MXN|167=FXNDF|541=20261127|1079=18:00:00Z|54=1|38=1000000|15=USD|151=1000000|14=0|6=0|60=20261026-09:33:21.074|120=USD|117=959bbc1a-7496-82e8-af14-38c826bae7c3|10=242|
+8=FIX.4.4|9=352|35=8|49=CRX-TRD|56=TKR1|34=6|52=20261026-09:33:21.163|37=63a7bccb-65ac-82d6-9262-ab701a9894be|11=ORD-000201|693=QR-000201|17=2fa513dc-2397-82f3-aa48-05e80c9ceb23|150=0|39=0|64=20261127|55=USD/MXN|167=FXNDF|541=20261127|1079=18:00:00Z|54=1|38=1000000|15=USD|151=1000000|14=0|6=0|60=20261026-09:33:21.159|120=USD|117=959bbc1a-7496-82e8-af14-38c826bae7c3|10=200|
 ```
 
 ### 6.3 Fill
 
 Wait for ExecutionReport (8) 150 = F. Book the trade on 150 = F, once for each TrdMatchID (880).
 
-Answer: 8 150 = F, 39 = 2 when the trade is final on Ethereum ([`28-exec-fill.fix`](examples/28-exec-fill.fix)), or 8 150 = 8 when the trade does not open. The fill carries SecondaryExecID (527), the on-chain trade hash, and CalculatedCcyLastQty (1056), the amount in the second currency of the Symbol.
+Answer: 8 150 = F, 39 = 2 when the trade is final on Ethereum, or 8 150 = 8 when the trade does not open. The fill carries SecondaryExecID (527), the on-chain trade hash, and CalculatedCcyLastQty (1056), the amount in the second currency of the Symbol.
+
+Fill ([`28-exec-fill.fix`](examples/28-exec-fill.fix)):
 
 ```text
-8=FIX.4.4|9=535|35=8|49=CRX-TRD|56=TKR1|34=7|52=20261025-17:30:54.605|37=fe0f0ab6-7a24-8f5d-b560-67de12f00deb|527=0xc4686427c2ba9a854310756514b1d62d35e9655f3d18bbe14652f36cb818b268|11=TKR1-O-1792949452320-4|693=TKR1-QR-1792949452320-3|17=4833b118-8f0f-8307-9079-b04c93aa9002|150=F|39=2|64=20261025|55=USD/MXN|167=FXNDF|541=20261025|1079=19:30:00Z|54=1|38=1000|15=USD|32=1000|31=18.5|151=0|14=1000|6=18.5|75=20261025|60=20261025-17:30:54.598|120=USD|851=2|117=561527dd-df4b-8967-b6ac-6e9160d6b7bb|880=67398b15-f79f-882b-ab81-892df5a37d04|1056=18500.00|10=128|
+8=FIX.4.4|9=527|35=8|49=CRX-TRD|56=TKR1|34=7|52=20261026-09:33:23.466|37=63a7bccb-65ac-82d6-9262-ab701a9894be|527=0x1462ecb95582689273ca8f76fbe539d00c2704cb9a964679e4765c94712fb95a|11=ORD-000201|693=QR-000201|17=70fda49c-379a-8ff5-b9fc-92f96e6c3ff8|150=F|39=2|64=20261127|55=USD/MXN|167=FXNDF|541=20261127|1079=18:00:00Z|54=1|38=1000000|15=USD|32=1000000|31=18.4753|151=0|14=1000000|6=18.4753|75=20261026|60=20261026-09:33:23.452|120=USD|851=2|117=959bbc1a-7496-82e8-af14-38c826bae7c3|880=978cb2c4-2835-8d0f-ba22-2ae00075fe63|1056=18475300.00|10=187|
 ```
 
 Until the settlement time, CRX can send 8 150 = H (Trade Cancel). The trade then does not stand. Remove it from the books.
 
-If no ExecutionReport arrives 5 seconds after the AJ, send OrderStatusRequest (H). Do not send a new AJ for the same quote.
+If no ExecutionReport arrives 5 s after the AJ, send OrderStatusRequest (H). Do not send a new AJ for the same quote.
 
 ## 7. Maker: first quote
 
 For the maker cases, CRX sends a test RFQ at 100 USD. See [11.6 Maker cases](rules-of-engagement.md#116-maker-cases).
 
+The signature proxy removes the signature data from the QuoteRequest (R) and signs the Quote (S). See [Messages between the signature proxy and CRX](#messages-between-the-signature-proxy-and-crx).
+
 ### 7.1 Request
 
-Wait for QuoteRequest (R) ([`50-quote-request-to-maker.fix`](examples/50-quote-request-to-maker.fix)). The signature proxy reads and removes RawDataLength (95) and RawData (96). The FIX engine receives the R without them ([`50a-quote-request-to-engine.fix`](examples/50a-quote-request-to-engine.fix)).
+Wait for QuoteRequest (R).
 
-- QuoteReqID (131) is a UUID. Side (54) is the taker's side.
-- ExpireTime (126) is the quote deadline: TransactTime (60) + 5 seconds, or + half the RFQ life when that is shorter. CRX can close collection before 126.
+- Side (54) is the taker's side.
+- ExpireTime (126) is the quote deadline: TransactTime (60) + 5 s, or + half the RFQ life when that is shorter. CRX can close collection before 126.
 - ValidUntilTime (62) is the signature end: the latest time that the trade can open on Ethereum.
 - A maker test request carries Text (58) with code `TEST_REQUEST` and sets 126 to the RFQ end.
 
 See [5.8 Timing](rules-of-engagement.md#58-timing).
 
+QuoteRequest to the FIX engine ([`50a-quote-request-to-engine.fix`](examples/50a-quote-request-to-engine.fix)):
+
 ```text
-8=FIX.4.4|9=258|35=R|49=CRX-TRD|56=MKR1|34=2|52=20261025-17:30:47.546|131=f4c08ede-85b7-89cc-be7c-8c4a3a9a5198|146=1|55=USD/MXN|167=FXNDF|541=20261025|1079=19:30:00Z|54=1|38=1000|64=20261025|15=USD|62=20261025-17:40:17.000|126=20261025-17:30:52.042|60=20261025-17:30:47.042|10=111|
+8=FIX.4.4|9=261|35=R|49=CRX-TRD|56=MKR1|34=2|52=20261026-09:33:16.016|131=06bd9fb2-3522-8607-9e4f-2cb03bbcd488|146=1|55=USD/MXN|167=FXNDF|541=20261127|1079=18:00:00Z|54=1|38=1000000|64=20261127|15=USD|62=20261026-09:42:45.000|126=20261026-09:33:20.781|60=20261026-09:33:15.781|10=104|
 ```
 
 ### 7.2 Quote
 
-Before ExpireTime (126), send Quote (S) ([`51-quote-from-engine.fix`](examples/51-quote-from-engine.fix)). Copy QuoteReqID (131), Symbol (55), Side (54), OrderQty (38), Currency (15), MaturityDate (541) and MaturityTime (1079) from the R. Copy UpfrontPriceType (1741) and UpfrontPrice (1742) when the R has them. Set ValidUntilTime (62) to 62 of the R. Set a new QuoteID (117), unique for the seat. Send OfferPx (133) when 54 = 1 and BidPx (132) when 54 = 2.
+Before ExpireTime (126), send Quote (S). Copy QuoteReqID (131), Symbol (55), Side (54), OrderQty (38), Currency (15), MaturityDate (541) and MaturityTime (1079) from the R. Copy UpfrontPriceType (1741) and UpfrontPrice (1742) when the R has them. Set ValidUntilTime (62) to 62 of the R. Set a new QuoteID (117), unique for the seat. Send OfferPx (133) when 54 = 1 and BidPx (132) when 54 = 2.
+
+Quote from the FIX engine ([`51-quote-from-engine.fix`](examples/51-quote-from-engine.fix)):
 
 ```text
-8=FIX.4.4|9=243|35=S|34=2|49=MKR1|52=20261025-17:30:47.558|56=CRX-TRD|15=USD|38=1000|54=1|55=USD/MXN|62=20261025-17:40:17.000|64=20261025|117=MKR1-Q-1792949447555-1|131=f4c08ede-85b7-89cc-be7c-8c4a3a9a5198|133=18.5|167=FXNDF|537=1|541=20261025|1079=19:30:00Z|10=243|
+8=FIX.4.4|9=235|35=S|34=2|49=MKR1|52=20261026-09:33:16.044|56=CRX-TRD|15=USD|38=1000000|54=1|55=USD/MXN|62=20261026-09:42:45.000|64=20261127|117=Q-000101|131=06bd9fb2-3522-8607-9e4f-2cb03bbcd488|133=18.4753|167=FXNDF|537=1|541=20261127|1079=18:00:00Z|10=064|
 ```
 
-The signature proxy adds CrxSignature (20007), the `Quote` signature in base64 ([`52-quote-to-crx.fix`](examples/52-quote-to-crx.fix)). See [5.3 Maker quote signature](rules-of-engagement.md#53-maker-quote-signature).
+Answer: QuoteStatusReport (AI) 297 = 0. The quote is live and binding until the quote end, with no last look.
+
+Quote accepted ([`53-quote-status-accepted.fix`](examples/53-quote-status-accepted.fix)):
 
 ```text
-8=FIX.4.4|9=338|35=S|34=2|49=MKR1|52=20261025-17:30:47.558|56=CRX-TRD|15=USD|38=1000|54=1|55=USD/MXN|62=20261025-17:40:17.000|64=20261025|117=MKR1-Q-1792949447555-1|131=f4c08ede-85b7-89cc-be7c-8c4a3a9a5198|133=18.5|167=FXNDF|537=1|541=20261025|1079=19:30:00Z|20007=Rp8mtKimxj2gcqZCu7NAJRKCan4KhGMndRcyLZ7Clw4oQTUrDlDd0hXGrmBCtDvS5ymsN1ioAvUSr5zE5LDcshs=|10=169|
-```
-
-Answer: QuoteStatusReport (AI) 297 = 0 ([`53-quote-status-accepted.fix`](examples/53-quote-status-accepted.fix)). The quote is live and binding until the quote end, with no last look.
-
-```text
-8=FIX.4.4|9=165|35=AI|49=CRX-TRD|56=MKR1|34=3|52=20261025-17:30:47.577|131=f4c08ede-85b7-89cc-be7c-8c4a3a9a5198|117=MKR1-Q-1792949447555-1|55=USD/MXN|60=20261025-17:30:47.573|297=0|10=205|
+8=FIX.4.4|9=151|35=AI|49=CRX-TRD|56=MKR1|34=3|52=20261026-09:33:16.088|131=06bd9fb2-3522-8607-9e4f-2cb03bbcd488|117=Q-000101|55=USD/MXN|60=20261026-09:33:16.079|297=0|10=232|
 ```
 
 ### 7.3 Fill
 
 Wait for ExecutionReport (8). To cancel the quote before a taker accepts it, send QuoteCancel (Z). A second Quote (S) on the same R replaces the first; CRX sends AI 297 = 6 for the first QuoteID.
 
-Answer: 8 150 = 0 (New) when a taker accepts the quote, then 8 150 = F when the trade is final ([`55-exec-fill-maker.fix`](examples/55-exec-fill-maker.fix)). Taker and maker get the same TrdMatchID (880) and SecondaryExecID (527). A quote that does not win gets AI 297 = 7 at the quote end.
+Answer: 8 150 = 0 (New) when a taker accepts the quote, then 8 150 = F when the trade is final. Taker and maker get the same TrdMatchID (880) and SecondaryExecID (527). A quote that does not win gets AI 297 = 7 at the quote end.
+
+Maker fill ([`55-exec-fill-maker.fix`](examples/55-exec-fill-maker.fix)):
 
 ```text
-8=FIX.4.4|9=493|35=8|49=CRX-TRD|56=MKR1|34=6|52=20261025-17:30:54.624|37=b802ddb6-431a-823d-9a15-c18935abf4ce|527=0xc4686427c2ba9a854310756514b1d62d35e9655f3d18bbe14652f36cb818b268|11=MKR1-Q-1792949447555-1|17=bbcc19be-cfa1-8227-b973-eb5b24ee5257|150=F|39=2|64=20261025|55=USD/MXN|167=FXNDF|541=20261025|1079=19:30:00Z|54=2|38=1000|15=USD|32=1000|31=18.5|151=0|14=1000|6=18.5|75=20261025|60=20261025-17:30:54.616|120=USD|851=1|117=MKR1-Q-1792949447555-1|880=67398b15-f79f-882b-ab81-892df5a37d04|1056=18500.00|10=188|
+8=FIX.4.4|9=483|35=8|49=CRX-TRD|56=MKR1|34=6|52=20261026-09:33:23.509|37=c44357af-4326-8aed-8b7a-17b97a682a2a|527=0x1462ecb95582689273ca8f76fbe539d00c2704cb9a964679e4765c94712fb95a|11=Q-000101|17=dfd3631e-f4f4-8776-8258-f5b0c38de807|150=F|39=2|64=20261127|55=USD/MXN|167=FXNDF|541=20261127|1079=18:00:00Z|54=2|38=1000000|15=USD|32=1000000|31=18.4753|151=0|14=1000000|6=18.4753|75=20261026|60=20261026-09:33:23.489|120=USD|851=1|117=Q-000101|880=978cb2c4-2835-8d0f-ba22-2ae00075fe63|1056=18475300.00|10=115|
 ```
 
 To decline an RFQ, send QuoteRequestReject (AG) 658 = 10 before ExpireTime (126) ([`59-maker-decline.fix`](examples/59-maker-decline.fix)).
@@ -291,10 +316,10 @@ Each CRX reject carries Text (58) in the form `<CODE>: <sentence> (trace <id>)`.
 | Code | Message | Cause | Fix |
 |---|---|---|---|
 | `LOGON_COMP_ID_UNKNOWN` | Logout (5) | CRX has no record of the SenderCompID, or TargetCompID (56) is wrong for the role. | Use the SenderCompID from onboarding. Use `CRX-TRD`, or `CRX-DC` for drop copy. |
-| `LOGON_SIGNATURE_INVALID` | Logout (5) | RawData (96) is not 88 characters of canonical base64, or the signature does not match Username (553). | Check `custody` and the key of the signature proxy. |
+| `LOGON_SIGNATURE_INVALID` | Logout (5) | The Logon signature from the signature proxy is not valid, or it does not match the address that signs. | Check `custody` and the key of the signature proxy. |
 | `LOGON_SIGNATURE_MISSING` | Logout (5) | The signature proxy did not sign the Logon. | Read the signature proxy log. |
 | `UNAUTHORIZED` | Logout (5) | The address that signs is not on record for the seat, the Logon time is out of range, or CRX took the signature before. | Check `custody` and the host clock. Log on again with a new signature. |
-| `SENDING_TIME_ACCURACY` | Logout (5) | SendingTime (52) is more than 120 seconds from CRX time. | Keep the host clock on NTP. |
+| `SENDING_TIME_ACCURACY` | Logout (5) | SendingTime (52) is more than 120 s from CRX time. | Keep the host clock on NTP. |
 | `LOGON_SESSION_ACTIVE` | Logout (5) | The SenderCompID has a live session. | Log on after the other session ends. |
 | `SEAT_CANNOT_SIGN` | Logout (5) | The seat is a contract wallet. | Use an EOA or MPC seat. |
 | `NOT_WHITELISTED` | Logout (5), AG, AI or 8 | CRX did not approve the seat for this action. | Contact CRX support. |
@@ -315,41 +340,94 @@ Each CRX reject carries Text (58) in the form `<CODE>: <sentence> (trace <id>)`.
 | `QUOTE_TERMS_MISMATCH` | AI 297 = 5, 300 = 99 | A maker Quote field differs from the R, or 62 is earlier than 62 of the R. | Copy the fields and 62 from the R. |
 | A signature proxy code, for example `TERMS_MISMATCH` | AI 297 = 5, 300 = 99, or 8 150 = 8, 103 = 99 | The signature proxy did not sign. | Read the signature proxy log. |
 | `SIGNATURE_INVALID` or `INVALID_SIGNATURE` | AI 297 = 5 or 8 150 = 8 | The signature does not match the seat. | Check the `[domain]` and the key of the signature proxy. |
-| `SIGNATURE_MISSING` | AI 297 = 5 or 8 150 = 8 | The message has no CrxSignature (20007) and no signature proxy code. | Send the message through the signature proxy. |
+| `SIGNATURE_MISSING` | AI 297 = 5 or 8 150 = 8 | The S or the AJ reached CRX with no signature and no signature proxy code. | Send the message through the signature proxy. |
 | `UNSUPPORTED_MESSAGE` | j 380 = 3 | CRX does not take this MsgType, for example NewOrderSingle (D). | Accept a quote with QuoteResponse (AJ). |
 | `RATE_LIMITED` | j 380 = 0. On an AJ: 8 150 = 8, 103 = 99 | The request exceeds a rate limit of the seat. | Wait for the time in Text. |
 
 Unknown Symbol ([`23-quote-request-reject.fix`](examples/23-quote-request-reject.fix)):
 
 ```text
-8=FIX.4.4|9=216|35=AG|49=CRX-TRD|56=TKR1|34=4|52=20261025-17:37:01.883|131=TKR1-R-1792949821765-2|658=1|146=1|55=USD/XXX|58=UNKNOWN_SYMBOL: The Symbol is not a CRX market. Use a Symbol from SecurityList (y). (trace 1a17423215903c1)|10=120|
+8=FIX.4.4|9=204|35=AG|49=CRX-TRD|56=TKR1|34=4|52=20261026-09:39:41.676|131=RFQ-001901|658=1|146=1|55=USD/XXX|58=UNKNOWN_SYMBOL: The Symbol is not a CRX market. Use a Symbol from SecurityList (y). (trace 1a1779479cb03d3)|10=077|
 ```
 
 Late accept ([`29-exec-rejected.fix`](examples/29-exec-rejected.fix)):
 
 ```text
-8=FIX.4.4|9=431|35=8|49=CRX-TRD|56=TKR1|34=9|52=20261025-17:33:58.944|37=NONE|11=TKR1-O-1792949638934-4|693=TKR1-QR-1792949638934-3|17=2f41c08f-7e42-8996-913f-1a0bf43352b6|150=8|39=8|103=4|64=20261025|55=USD/MXN|167=FXNDF|541=20261025|1079=19:31:00Z|54=1|38=1000|15=USD|151=0|14=0|6=0|60=20261025-17:33:58.936|120=USD|58=QUOTE_EXPIRED: The quote ended before an accept reached CRX. (trace 1a1742057180219)|117=a1b63e3b-9376-880c-bc58-0b584c618fca|10=210|
+8=FIX.4.4|9=408|35=8|49=CRX-TRD|56=TKR1|34=9|52=20261026-09:36:32.982|37=NONE|11=ORD-000801|693=QR-000801|17=8a44db94-d3b9-83df-84f0-fdf1e54fec1b|150=8|39=8|103=4|64=20261127|55=USD/MXN|167=FXNDF|541=20261127|1079=18:00:00Z|54=1|38=1000000|15=USD|151=0|14=0|6=0|60=20261026-09:36:32.915|120=USD|58=QUOTE_EXPIRED: The quote ended before an accept reached CRX. (trace 1a177919884021d)|117=11116d0c-113b-804e-aafd-07cd8906ab57|10=239|
 ```
 
 Late maker Quote ([`54-quote-status-rejected.fix`](examples/54-quote-status-rejected.fix)):
 
 ```text
-8=FIX.4.4|9=280|35=AI|49=CRX-TRD|56=MKR1|34=3|52=20261025-17:31:52.030|131=176e5e17-7b38-8243-8bed-4aa99977c5a6|117=MKR1-Q-1792949512010-1|55=USD/MXN|60=20261025-17:31:52.024|297=5|58=QUOTE_WINDOW_CLOSED: The quote reached CRX after ExpireTime (126) of the request. (trace 1a1741e67500115)|300=4|10=003|
+8=FIX.4.4|9=266|35=AI|49=CRX-TRD|56=MKR1|34=3|52=20261026-09:34:23.485|131=9acfe992-a282-87aa-842a-bdd79da947c4|117=Q-000501|55=USD/MXN|60=20261026-09:34:23.479|297=5|58=QUOTE_WINDOW_CLOSED: The quote reached CRX after ExpireTime (126) of the request. (trace 1a1778f9edc0119)|300=4|10=097|
 ```
 
-Accept that the signature proxy did not sign, and the CRX answer ([`37-quote-response-unsigned.fix`](examples/37-quote-response-unsigned.fix), [`38-exec-sign-refusal.fix`](examples/38-exec-sign-refusal.fix)):
+Accept that the signature proxy did not sign ([`38-exec-sign-refusal.fix`](examples/38-exec-sign-refusal.fix)):
 
 ```text
-8=FIX.4.4|9=311|35=AJ|34=4|49=TKR1|52=20261025-17:34:09.062|56=CRX-TRD|11=TKR1-O-1792949649062-4|38=1000|44=1.0|54=1|55=USD/MXN|60=20261025-17:34:09.062|64=20261025|117=2cd65202-72b5-8425-b5f5-930177c00a79|167=FXNDF|541=20261025|693=TKR1-QR-1792949649062-3|694=1|58=TERMS_MISMATCH: The signature proxy did not sign the accept.|10=231|
-8=FIX.4.4|9=433|35=8|49=CRX-TRD|56=TKR1|34=5|52=20261025-17:34:09.067|37=NONE|11=TKR1-O-1792949649062-4|693=TKR1-QR-1792949649062-3|17=d8f956f8-67c4-895b-b809-d270c85c76c6|150=8|39=8|103=99|64=20261025|55=USD/MXN|167=FXNDF|541=20261025|1079=19:34:00Z|54=1|38=1000|15=USD|151=0|14=0|6=0|60=20261025-17:34:09.062|120=USD|58=TERMS_MISMATCH: The signature proxy did not sign the message. (trace 1a174207ea60231)|117=2cd65202-72b5-8425-b5f5-930177c00a79|10=186|
+8=FIX.4.4|9=410|35=8|49=CRX-TRD|56=TKR1|34=5|52=20261026-09:36:48.454|37=NONE|11=ORD-001001|693=QR-001001|17=388c1ad9-e594-84c9-a94b-f3ccb89da994|150=8|39=8|103=99|64=20261127|55=USD/MXN|167=FXNDF|541=20261127|1079=18:00:00Z|54=1|38=1000000|15=USD|151=0|14=0|6=0|60=20261026-09:36:48.411|120=USD|58=TERMS_MISMATCH: The signature proxy did not sign the message. (trace 1a17791d50f023a)|117=11003a68-99ab-84fc-bbc4-fafb643da005|10=100|
 ```
 
 NewOrderSingle (D) ([`35-new-order-single-rejected.fix`](examples/35-new-order-single-rejected.fix)):
 
 ```text
-8=FIX.4.4|9=151|35=j|49=CRX-TRD|56=TKR1|34=2|52=20261025-17:38:11.847|45=2|372=D|380=3|58=UNSUPPORTED_MESSAGE: CRX does not take this MsgType. (trace 1a174243303045a)|10=023|
+8=FIX.4.4|9=151|35=j|49=CRX-TRD|56=TKR1|34=2|52=20261026-09:40:59.581|45=2|372=D|380=3|58=UNSUPPORTED_MESSAGE: CRX does not take this MsgType. (trace 1a17795aa39047a)|10=139|
 ```
 
 See [9. Rejects and codes](rules-of-engagement.md#9-rejects-and-codes) for every code.
 
 **Next:** run the certification cases on production at 100 USD. See [11. Onboarding and certification](rules-of-engagement.md#11-onboarding-and-certification).
+
+## Messages between the signature proxy and CRX
+
+The FIX engine does not send or read Username (553), RawDataLength (95), RawData (96) or CrxSignature (20007). The signature proxy adds them on the way to CRX, sets ApplicationSystemVersion (1604) on the Logon, and removes 95 and 96 on the way to the FIX engine. It sets a new BodyLength (9) and CheckSum (10) on each message that it changes. All other fields stay as they are. The samples use test keys with no funds. See [5.10 Messages between the signature proxy and CRX](rules-of-engagement.md#510-messages-between-the-signature-proxy-and-crx).
+
+First Logon of the day, signature proxy to CRX ([`02-logon-to-crx.fix`](examples/02-logon-to-crx.fix)):
+
+```text
+8=FIX.4.4|9=289|35=A|34=1|49=TKR1|52=20261026-09:33:15.393|56=CRX-TRD|98=0|108=30|141=Y|1603=QuickFIX/J 2.3.3|1605=quickfixj.org|553=0xf683c26739271eeb6501552c68ed37597df8d90b|95=88|96=98Nu4OdZNuPBj2nYfJ10q1GV3s21Olvdu5UqW5hojaBJ9EHqIfxROoBp6BFsZ/UCq6XPk7JwniuvSbPZr4Mt8Bw=|1604=crx-signature-proxy/0.1.0|10=034|
+```
+
+- Username (553): the address that signs, the seat or a login key. `0x` and 40 lowercase hex, 42 characters.
+- RawDataLength (95) = 88 and RawData (96): the Logon signature, 65 bytes, base64 of 88 characters. It covers the `chain_id` of step 3. See [4.1.1 Logon signature](rules-of-engagement.md#411-logon-signature).
+- ApplicationSystemVersion (1604): the name and version of the signature proxy.
+
+Quote (S) to a taker, CRX to the signature proxy ([`22-quote-to-taker.fix`](examples/22-quote-to-taker.fix)):
+
+```text
+8=FIX.4.4|9=413|35=S|49=CRX-TRD|56=TKR1|34=4|52=20261026-09:33:21.054|131=RFQ-000201|117=959bbc1a-7496-82e8-af14-38c826bae7c3|537=1|55=USD/MXN|167=FXNDF|541=20261127|1079=18:00:00Z|54=1|38=1000000|64=20261127|15=USD|133=18.4753|62=20261026-09:35:15.781|60=20261026-09:33:21.048|95=140|96=opnqaSDcEq+6Fgi01vYVUS4RqH8D3qco+BAKbpBcuYmVZHBnJlHZ6xy1DOpTB8Ufx/cFRnziATEAAAAAat8glQAAAaF3jqsJjQuNri/MHi4UFVM+IA0Cy1ccPxvpq4tM6Rfe9CkmJmA=|10=233|
+```
+
+- RawDataLength (95) = 140 and RawData (96): the signature data of the S, 104 bytes, base64 of 140 characters. The signature proxy keeps it for the accept. See [5.4 Taker accept signature](rules-of-engagement.md#54-taker-accept-signature).
+
+QuoteResponse (AJ), signature proxy to CRX ([`25-quote-response-to-crx.fix`](examples/25-quote-response-to-crx.fix)):
+
+```text
+8=FIX.4.4|9=338|35=AJ|34=4|49=TKR1|52=20261026-09:33:21.065|56=CRX-TRD|11=ORD-000201|38=1000000|44=18.4753|54=1|55=USD/MXN|60=20261026-09:33:21.065|64=20261127|117=959bbc1a-7496-82e8-af14-38c826bae7c3|167=FXNDF|541=20261127|693=QR-000201|694=1|1079=18:00:00Z|20007=qkLfhj7/MD7qVi349vO0LP4zn70FCyXxFP0sad06SNAl+zxxUrXfGVFvDw7x4/WjUS78kNoM6UtlsHdWBb/1ABw=|10=230|
+```
+
+- CrxSignature (20007): the EIP-712 `Trade` signature, 65 bytes, base64 of 88 characters.
+
+QuoteRequest (R) to a maker, CRX to the signature proxy ([`50-quote-request-to-maker.fix`](examples/50-quote-request-to-maker.fix)):
+
+```text
+8=FIX.4.4|9=359|35=R|49=CRX-TRD|56=MKR1|34=2|52=20261026-09:33:16.016|131=06bd9fb2-3522-8607-9e4f-2cb03bbcd488|146=1|55=USD/MXN|167=FXNDF|541=20261127|1079=18:00:00Z|54=1|38=1000000|64=20261127|15=USD|62=20261026-09:42:45.000|126=20261026-09:33:20.781|60=20261026-09:33:15.781|95=88|96=TTiOCgP1HDhRlYk+T9oTWzT8z426sVdMO86OAu/d5avkCDsmFBqdCwinfMJ31nS52oVJvxMLbFIIVE1wvDc3Rw==|10=242|
+```
+
+- RawDataLength (95) = 88 and RawData (96): the signature data of the R, 64 bytes, base64 of 88 characters. The signature proxy keeps it for the quote. See [5.3 Maker quote signature](rules-of-engagement.md#53-maker-quote-signature).
+
+Quote (S) from a maker, signature proxy to CRX ([`52-quote-to-crx.fix`](examples/52-quote-to-crx.fix)):
+
+```text
+8=FIX.4.4|9=330|35=S|34=2|49=MKR1|52=20261026-09:33:16.044|56=CRX-TRD|15=USD|38=1000000|54=1|55=USD/MXN|62=20261026-09:42:45.000|64=20261127|117=Q-000101|131=06bd9fb2-3522-8607-9e4f-2cb03bbcd488|133=18.4753|167=FXNDF|537=1|541=20261127|1079=18:00:00Z|20007=0fTVsTaYLViaVBwNzUclzYxecAfNBRjwSgwKt2Nnz88PRb/E0OjQaU0AFLu+zrHwxZY4RGLRMp5PlNs4HsPdUBw=|10=137|
+```
+
+- CrxSignature (20007): the EIP-712 `Quote` signature, 65 bytes, base64 of 88 characters.
+
+Unsigned QuoteResponse (AJ), signature proxy to CRX ([`37-quote-response-unsigned.fix`](examples/37-quote-response-unsigned.fix)):
+
+```text
+8=FIX.4.4|9=307|35=AJ|34=4|49=TKR1|52=20261026-09:36:47.809|56=CRX-TRD|11=ORD-001001|38=1000000|44=18.4850|54=1|55=USD/MXN|60=20261026-09:36:47.809|64=20261127|117=11003a68-99ab-84fc-bbc4-fafb643da005|167=FXNDF|541=20261127|693=QR-001001|694=1|1079=18:00:00Z|58=TERMS_MISMATCH: The signature proxy did not sign the accept.|10=213|
+```
+
+- Text (58): the signature proxy code and one sentence, in place of a Text from the FIX engine. The AJ has no CrxSignature (20007). See [5.6 Unsigned messages](rules-of-engagement.md#56-unsigned-messages).

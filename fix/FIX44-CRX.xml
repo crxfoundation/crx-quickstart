@@ -1,5 +1,5 @@
 <!-- CRX FIX 4.4 dictionary: QuickFIX/J 2.3.3 FIX44.xml plus MaturityTime(1079) in Instrument, UpfrontPriceType(1741) and UpfrontPrice(1742) on QuoteRequest, Quote and ExecutionReport, RawDataLength(95) and RawData(96) on QuoteRequest and Quote, CrxSignature(20007) on Quote and QuoteResponse, TrdMatchID(880) and QuoteID on ExecutionReport, CalculatedCcyLastQty(1056) on ExecutionReport, QuoteRejectReason on QuoteStatusReport, ApplicationSystemName(1603), ApplicationSystemVersion(1604) and ApplicationSystemVendor(1605) on Logon, SecurityType FXNDF and QuoteCancelType 5. Quote requires Side, OrderQty, Currency and ValidUntilTime. -->
-<!-- CRX dictionary version: RoE 2.0, issued 2026-10-25, git 787c49ba587d, body MD5 9bec514b4f21bf16cb854eef74c3065d -->
+<!-- CRX dictionary version: RoE 2.0.1, issued 2026-10-26, git 5e9a4576ae35, body MD5 9bec514b4f21bf16cb854eef74c3065d -->
 <fix major="4" minor="4">
   <header>
     <field name="BeginString" required="Y"/>
