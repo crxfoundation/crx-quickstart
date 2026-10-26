@@ -1,6 +1,6 @@
 # CRX API Quickstart
 
-The CRX API Quickstart pages of Discover and the CRX FIX Quickstart, in Markdown. The taker and maker pages match the live Discover pages.
+The CRX API Quickstart pages of Discover and the CRX FIX API page, in Markdown. The taker and maker pages match the live Discover pages.
 
 | File | Content |
 |---|---|

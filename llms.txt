@@ -1,6 +1,6 @@
 # CRX API Quickstart
 
-> The CRX API Quickstart pages of Discover and the CRX FIX Quickstart, in Markdown. The taker and maker pages match the live Discover pages. SDK: https://github.com/crxfoundation/crx-python. Blocks tagged `crx-*` are Discover page elements.
+> The CRX API Quickstart pages of Discover and the CRX FIX API page, in Markdown. The taker and maker pages match the live Discover pages. SDK: https://github.com/crxfoundation/crx-python. Blocks tagged `crx-*` are Discover page elements.
 
 ## Pages
 
