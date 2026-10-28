@@ -67,7 +67,7 @@ Deposit validated.
 Request a quote by setting the trade parameters: pair, side, notional and settlement date.
 
 ```python
-# c.quote(pair="USD/MXN" | "USD/BRL" | "USD/PHP", side="buy" | "sell", notional=100 to 10_000_000, settles=aware datetime | "YYYY-MM-DDTHH:MMZ" | Unix seconds)
+# c.quote(pair="USD/MXN" | "USD/BRL" | "USD/PHP" | "USD/INR" | "BTC/USD" | "EUR/USD", side="buy" | "sell", notional=USD 100 to 10_000_000 | BTC or EUR in c.markets() limits, settles=aware datetime | "YYYY-MM-DDTHH:MMZ" | Unix seconds)
 settles = datetime.now(timezone.utc) + timedelta(hours=2)
 q = c.quote("USD/MXN", "buy", 100, settles=settles)
 print(q.pair, q.side, q.notional, q.rate, q.settles_at, q.closes_at)
