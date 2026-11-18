@@ -41,7 +41,7 @@ To complete your first trade easily in a few minutes, install the SDK, replace /
 
 ## Set up
 
-Install the SDK on Python 3.10 or later; the account wallet needs 100 USDC and about 0.001 ETH for network fees.
+Install the SDK on Python 3.10 or later; the account wallet needs 100 USDC and ETH for network fees.
 
 ```bash
 pip install "git+https://github.com/crxfoundation/crx-python@v0.3.17"
