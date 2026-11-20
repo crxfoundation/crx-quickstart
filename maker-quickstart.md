@@ -44,7 +44,7 @@ To complete your first trade easily in a few minutes, install the SDK, replace /
 Install the SDK on Python 3.10 or later; the account wallet needs 100 USDC and ETH for network fees.
 
 ```bash
-pip install "git+https://github.com/crxfoundation/crx-python@v0.3.17"
+pip install "git+https://github.com/crxfoundation/crx-python@v0.4.0"
 ```
 
 ```bash
@@ -96,16 +96,33 @@ print(rfq.pair, rfq.side, rfq.notional, rfq.reference_rate)
 
 ```crx-step-done
 Test RFQ received.
-[Quote it](#quote-it)
+[Wire your own price](#wire-your-own-price)
 ```
 
-## Quote it
+## Wire your own price
 
-Send a firm quote at the RFQ's reference rate, `rfq.reference_rate`, which CRX accepts.
+`quote_live(price)` calls `price(rfq)` for each live RFQ. The `Rfq` has `pair` (`str`) and `side` (`"buy"` or `"sell"`). `side` is the maker's side in the base currency. `notional` is a `Decimal` amount in the base currency, and `expiry` is a UTC settlement `datetime`. `reference_rate` is set on test RFQs. Live RFQs do not provide it.
+
+Return a rate in quote currency per base unit. Use at most six decimal places. Return `None` to pass. CRX must receive the quote within five seconds of `rfq.opened`. The SDK uses the RFQ's quote expiry, which must be at least 60 seconds after submission. Keep `price()` fast.
+
+This test function applies a spread to the RFQ's current reference rate. For live RFQs, replace `mid` with a live market-data lookup.
 
 ```python
-# maker.send_quote(rfq, rate)
-q = maker.send_quote(rfq, rfq.reference_rate)
+from decimal import Decimal
+
+def price(rfq):
+    if rfq.pair != "USD/MXN" or rfq.notional is None:
+        return None
+    mid = rfq.reference_rate
+    if mid is None:
+        return None
+    if rfq.side == "sell":
+        return mid + Decimal("0.001")
+    if rfq.side == "buy":
+        return mid - Decimal("0.001")
+    return None
+
+q = maker.send_quote(rfq, price(rfq))
 print(q.rate)
 ```
 
@@ -113,6 +130,8 @@ print(q.rate)
 Quote sent.
 [Confirm the trade](#confirm-the-trade)
 ```
+
+With a live price source in `price()`, quote new RFQs with `maker.quote_live(price, seconds=3600)`. For direct REST calls, send the returned rate as `rate` to `POST /rfqs/{rfq_id}/quotes`. Use the REST and WebSocket API reference supplied at onboarding. For FIX, send `OfferPx (133)` when `Side (54)` is 1 or `BidPx (132)` when it is 2. See [Maker: first quote](fix/quickstart.md#4-maker-first-quote).
 
 ## Confirm the trade
 
